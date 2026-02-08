@@ -1,61 +1,82 @@
 "use client"
 import { supabase } from '@/services/supabaseClient'
-import React, {useState, useEffect, use} from 'react'
+import React, { useState, useEffect, useContext } from 'react'
+import { UserDetailContext } from "@/context/UserDetailContext"
+
 
 function Provider({ children }) {
+    const [user, setUser] = useState(null)
 
-    const [user, setUser] = useState();
+    const createOrLoadUser = async (authUser) => {
+        if (!authUser?.email) {
+            setUser(null)
+            return
+        }
 
-    useEffect(()=>{
-        CreateNewUser()
-    }   ,[])
-  
-    const CreateNewUser =()=>{
+        // Always expose auth user immediately for UI
+        setUser(authUser)
 
-        supabase.auth.getUser().then(async({data:{user}})=>{
+        const identityData = authUser.identities?.[0]?.identity_data
+        const profile = {
+            name:
+                authUser.user_metadata?.name ||
+                authUser.user_metadata?.full_name ||
+                authUser.user_metadata?.preferred_username ||
+                identityData?.name ||
+                identityData?.full_name ||
+                identityData?.given_name,
+            email: authUser.email,
+            picture: authUser.user_metadata?.picture || identityData?.picture,
+        }
 
-            //cheack if user already exist 
-            let { data: Users, error } = await supabase
-               .from('Users')
-               .select("*")
-               .eq('email', user?.email);
+        const { data: saved } = await supabase
+            .from('Users')
+            .upsert(profile, { onConflict: 'email' })
+            .select()
+            .single()
 
-            console.log(Users)
-        
+        if (saved) {
+            setUser(saved)
+        }
+    }
 
-            //If not then create new user
-            if(Users?.length === 0)
-            {
-                const { data, error } = await supabase.from('Users')
-                .insert([
-                   { 
-                    name: user?.user_metadata?.name,
-                    email: user?.email,
-                    picture:user?.user_metadata?.picture 
-                   }
-                ])
-                console.log(data);
-                setUser(data);
-                return;
+    useEffect(() => {
+        const loadSessionUser = async () => {
+            const { data: sessionData } = await supabase.auth.getSession()
+            const authUser = sessionData?.session?.user
+            if (authUser) {
+                await createOrLoadUser(authUser)
             }
-            setUser(user);
-        
+        }
 
-        })
-        
-    }
+        loadSessionUser()
 
-    return
-    {
-        <UserDetailContext.Provider value={{user, setUser}}>
-           <div> {children} </div>     
-        </UserDetailContext.Provider>  
-    }
+        const { data: authListener } = supabase.auth.onAuthStateChange(
+            async (_event, session) => {
+                const authUser = session?.user
+                if (authUser) {
+                    await createOrLoadUser(authUser)
+                } else {
+                    setUser(null)
+                }
+            }
+        )
+
+        return () => {
+            authListener?.subscription?.unsubscribe()
+        }
+    }, [])
+
+    return (
+        <UserDetailContext.Provider value={{ user, setUser }}>
+            <div>{children}</div>
+        </UserDetailContext.Provider>
+    )
 }
 
 export default Provider
 
-export const useUser=()=>{
-    const context = useContext(UserDetailContext);
-    return context;
+export const useUser = () => {
+    const context = useContext(UserDetailContext)
+    return context
 }
