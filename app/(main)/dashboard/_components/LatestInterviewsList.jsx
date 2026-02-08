@@ -4,8 +4,6 @@ import React, { useState, useEffect } from "react";
 import { Video } from "lucide-react";
 
 
-
-
 function LatestInterviewsList() {
     const [interviewList, setInterviewList] = useState([])
 
