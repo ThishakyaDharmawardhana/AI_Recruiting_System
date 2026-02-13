@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react'
+
+import React, { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -18,14 +19,12 @@ function FormContainer({onHandleInputChange, GoToNext}) {
   const [selectedTypes, setSelectedTypes] = useState([])
 
   const AddInterviewType = (title) => {
-    setSelectedTypes((prev) => {
-      const updatedTypes = prev.includes(title)
-        ? prev.filter((item) => item !== title)
-        : [...prev, title]
+    const updatedTypes = selectedTypes.includes(title)
+      ? selectedTypes.filter((item) => item !== title)
+      : [...selectedTypes, title]
 
-      onHandleInputChange('type', updatedTypes)
-      return updatedTypes
-    })
+    setSelectedTypes(updatedTypes)
+    onHandleInputChange('type', updatedTypes)
   }
   return (
     <div className='p-5 bg-white rounded-2xl'>
