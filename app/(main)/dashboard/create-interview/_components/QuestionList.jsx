@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Loader2 } from 'lucide-react'
 
 
-function QuestionList({formData}) {
+function QuestionList({formData,onCreateLink}) {
 
   const[loading, setLoading]=useState(true);
   const[questionList, setQuestionList]=useState();
@@ -49,24 +49,45 @@ function QuestionList({formData}) {
 
   const onFinish = async () => {
       setSaveLoading(true);
-      const interview_id = uuidv4();
-      const { data, error } = await supabase
-        .from('Interviews')
-        .insert([
-            { 
-              ...formData,
-              questionList: questionList,
-              userEmail: user?.email,
-              interview_id: interview_id
-            },
-        ])
-        .select()
+      try {
+        if (!user?.email) {
+          toast.error('Not authenticated. Please login first.');
+          setSaveLoading(false);
+          return;
+        }
 
+        const interview_id = uuidv4();
+        console.log('Saving interview with user:', user.email);
+        
+        const { error } = await supabase
+          .from('Interviews')
+          .insert({
+            jobPosition: formData?.jobPosition || '',
+            jobDescription: formData?.jobDescription || '',
+            duration: formData?.duration || '',
+            type: Array.isArray(formData?.type) ? formData.type.join(',') : (formData?.type || ''),
+            questionList: JSON.stringify(questionList || []),
+            userEmail: user.email,
+            interview_id: interview_id,
+            created_at: new Date().toISOString()
+          });
+
+        if (error) {
+          console.error('Database error:', error);
+          toast.error('Failed to save: ' + error.message);
+          setSaveLoading(false);
+          return;
+        }
+
+        console.log('Interview saved successfully');
+        toast.success('Interview saved!');
         setSaveLoading(false);
-
-      console.log(data);
-      
-    
+        onCreateLink({interview_id, questionList});
+      } catch (err) {
+        console.error('Error:', err);
+        toast.error('Error: ' + (err?.message || 'Unknown error'));
+        setSaveLoading(false);
+      }
   }
 
   return (
@@ -93,7 +114,7 @@ function QuestionList({formData}) {
         <div className='flex justify-end mt-10'>
           <Button className='cursor-pointer' onClick={()=>onFinish()} disabled={saveLoading}>
             {saveLoading && <Loader2 className="animate-spin" />}
-            Finish</Button>
+            Create Interview Link & Finish</Button>
         </div> 
     </div>
   )

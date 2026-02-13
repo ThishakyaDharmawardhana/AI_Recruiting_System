@@ -6,7 +6,7 @@ Job Description: {{jobDescription}}
 Interview Duration: {{duration}} minutes
 Interview Type: {{type}}
 
-Generate relevant interview questions. For each question, specify which type it belongs to from the provided Interview Types.
+Generate exactly {{questionCount}} interview questions based on {{duration}} minutes duration. For each question, specify which type it belongs to from the provided Interview Types.
 Return as JSON with format: 
 {
   "interviewQuestions": [
@@ -20,11 +20,13 @@ Return as JSON with format:
 export async function POST(req) {   
 
     const{jobPosition, jobDescription, duration, type}=await req.json();
+    const questionCount = Math.ceil(parseInt(duration) / 3);
     
     const FINAL_PROMT=QUESTION_PROMPT
     .replace('{{jobTitle}}', jobPosition)
     .replace('{{jobDescription}}', jobDescription)
     .replace('{{duration}}', duration)
+    .replace('{{questionCount}}', questionCount)
     .replace('{{type}}', type)
 
     console.log(FINAL_PROMT);
