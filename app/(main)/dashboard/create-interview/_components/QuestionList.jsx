@@ -2,11 +2,20 @@ import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import { toast } from 'react-hot-toast'
 import { Loader2 as Loader2Icon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import QuestionListContainer from './QuestionListContainer'
+import { supabase } from '@/services/supabaseClient'
+import { useUser } from '@/app/provider'
+import { v4 as uuidv4 } from 'uuid';
+import { Loader2 } from 'lucide-react'
+
 
 function QuestionList({formData}) {
 
   const[loading, setLoading]=useState(true);
   const[questionList, setQuestionList]=useState();
+  const{user}=useUser();
+  const[saveLoading, setSaveLoading]=useState(false);
 
   useEffect(() => {
     if(formData)
@@ -38,6 +47,28 @@ function QuestionList({formData}) {
     }
   }
 
+  const onFinish = async () => {
+      setSaveLoading(true);
+      const interview_id = uuidv4();
+      const { data, error } = await supabase
+        .from('Interviews')
+        .insert([
+            { 
+              ...formData,
+              questionList: questionList,
+              userEmail: user?.email,
+              interview_id: interview_id
+            },
+        ])
+        .select()
+
+        setSaveLoading(false);
+
+      console.log(data);
+      
+    
+  }
+
   return (
     <div>
         {loading&&
@@ -53,22 +84,17 @@ function QuestionList({formData}) {
                          
         }
         {questionList?.length>0 &&
-                <div className='p-5  border border-gray-300 rounded-xl'>
-                  {questionList.map((item, index) => (
-                    <div key={index} className='p-5 bg-white border-2 border-gray-200 mb-4 rounded-xl shadow-sm hover:shadow-md transition-shadow'>
-                      <h3 className='font-semibold text-gray-900 mb-4 text-lg'>{index + 1}. {item.question}</h3>
-                      <div className='inline-flex items-center gap-2 px-4 py-2 bg-orange-100 border border-orange-300 rounded-full'>
-                        <span className='text-orange-600 text-sm font-semibold'>
-                          ✦ {item.type || 'Unknown Type'}
-                        </span>
-                      </div>
-                    </div>
 
-                
-                
-                  ))}
-                </div>
-        }   
+          <div>
+            <QuestionListContainer questionList={questionList} />
+          </div>
+        }  
+
+        <div className='flex justify-end mt-10'>
+          <Button className='cursor-pointer' onClick={()=>onFinish()} disabled={saveLoading}>
+            {saveLoading && <Loader2 className="animate-spin" />}
+            Finish</Button>
+        </div> 
     </div>
   )
 }
