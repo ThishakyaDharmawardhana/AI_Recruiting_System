@@ -2,7 +2,7 @@
 import { Inter } from 'next/font/google'
 import React, { useEffect } from 'react'
 import Image from 'next/image'
-import { Clock } from 'lucide-react'
+import { Clock, Loader2Icon } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Info } from 'lucide-react'
@@ -11,6 +11,10 @@ import {supabase} from '@/services/supabaseClient'
 import { useParams } from 'next/navigation'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
+import { useContext } from 'react'
+import { InterviewDataContext } from '@/context/InterviewDataContext'
+import { useRouter } from 'next/navigation'
+import QuestionList from '@/app/(main)/dashboard/create-interview/_components/QuestionList'
 
 
 
@@ -21,6 +25,9 @@ function Interview() {
   const [interviewData, setInterviewData]=useState();
   const[userName, setUserName]=useState('');
   const [loading, setLoading]=useState(false);
+  const {interviewInfo, setInterviewInfo}=useContext(InterviewDataContext);
+  const router=useRouter();
+
 
 
   useEffect(()=>{
@@ -36,7 +43,7 @@ function Interview() {
         .select("jobPosition,jobDescription,duration,type")
         .eq('interview_id', interview_id)
       setInterviewData(Interviews[0]);
-       setLoading(false);
+      setLoading(false);
 
       if(Interviews?.length==0){
         toast('Incorrect Interview Link');
@@ -50,6 +57,22 @@ function Interview() {
       toast('Incorrect Interview Link');
     }
 
+  }
+
+  const onJoininterview=async()=>{
+    setLoading(true);
+    let {data:Interviews, error}=await supabase
+        .from('Interviews')
+        .select('*')
+        .eq('interview_id', interview_id)
+
+    console.log(Interviews[0]);
+    setInterviewInfo({
+        userName: userName,
+        interviewData:Interviews[0]
+    });
+    router.push('/interview/'+ interview_id +'/start');
+    setLoading(false);
   }
 
   return (
@@ -85,9 +108,11 @@ function Interview() {
             </div>
 
         </div>
-        <Button className={'mt-4 w-full font-bold'}
-        disabled={loading ||!userName}>
-            <Video/>Start Interview</Button>
+        <Button className={'mt-4 w-full font-bold cursor-pointer'}
+        disabled={loading ||!userName}
+         onClick={()=>onJoininterview()}
+         > 
+            <Video/> {loading && <Loader2Icon className="animate-spin"/>}Start Interview</Button>
       </div>
     </div>
   )
