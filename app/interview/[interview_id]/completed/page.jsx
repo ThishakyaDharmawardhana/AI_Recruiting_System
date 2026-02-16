@@ -15,7 +15,7 @@ function InterviewComplete() {
         height={200} 
         className="w-[50px] h-[50px]" />
 
-        <h1 className='font-bold text-lg mt-4'>Interview Completed !</h1> 
+        <h1 className='font-bold text-lg mt-2'>Interview Completed !</h1> 
         <p className='mt-3'>Thank you for participating in the AI-driven interview with AIcruiter</p>
 
         <div className='flex items-center flex-col'>
