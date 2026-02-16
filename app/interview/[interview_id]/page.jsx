@@ -24,6 +24,7 @@ function Interview() {
   console.log(interview_id)
   const [interviewData, setInterviewData]=useState();
   const[userName, setUserName]=useState('');
+  const [userEmail, setUserEmail]=useState('');
   const [loading, setLoading]=useState(false);
   const {interviewInfo, setInterviewInfo}=useContext(InterviewDataContext);
   const router=useRouter();
@@ -69,6 +70,7 @@ function Interview() {
     console.log(Interviews[0]);
     setInterviewInfo({
         userName: userName,
+        userEmail: userEmail,
         interviewData:Interviews[0]
     });
     router.push('/interview/'+ interview_id +'/start');
@@ -83,8 +85,8 @@ function Interview() {
 
         <h2 className='mt-2'>AI-Powered Interview Platform</h2> 
 
-        <Image src={'/interview.png'} alt="interview" width={250} height={250} 
-                    className="w-[250px] rounded-full mt-3"/>     
+        <Image src={'/interview.png'} alt="interview" width={500} height={500} 
+                    className="w-[300px] rounded-full mt-3"/>     
 
         <h2 className='mt-2 font-bold text-xl'>{interviewData?.jobPosition}</h2>  
         <h2 className='flex gap-2 items-center text-gray-500 mt-3'><Clock className='w-4 h-4'/>{interviewData?.duration}</h2>              
@@ -93,6 +95,12 @@ function Interview() {
             <h2>Enter your full name</h2>
             <Input placeholder='e.g Jhon Smith' className='w-full p-3 rounded-lg border border-gray-300 mt-2'
              onChange={(event)=>setUserName(event.target.value)} />
+        </div>
+
+        <div className='w-full'>
+            <h2>Enter your Email</h2>
+            <Input placeholder='e.g Jhon@gmail.com' className='w-full p-3 rounded-lg border border-gray-300 mt-2'
+             onChange={(event)=>setUserEmail(event.target.value)} />
         </div>
 
         <div className='bg-orange-100 flex gap-1 p-3 rounded-lg mt-4'>

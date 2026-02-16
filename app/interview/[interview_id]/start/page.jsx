@@ -1,15 +1,17 @@
 'use client'
-import React ,{ use, useContext, useRef } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import { InterviewDataContext } from '@/context/InterviewDataContext';
-import { Timer } from 'lucide-react';   
+import { Loader2Icon, Timer } from 'lucide-react';   
 import Image from 'next/image';
 import { Mic } from 'lucide-react';
 import { Phone } from 'lucide-react';
 import Vapi from '@vapi-ai/web';
 import AlertConformation from './_components/AlertConformation';
 import toast from 'react-hot-toast';
-import { useState } from 'react';
-import { useEffect } from 'react';
+import axios from 'axios';
+import { useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/services/supabaseClient';
 
 
 
@@ -20,9 +22,46 @@ function StartInterview() {
     const vapiRef = useRef(null);
     const callStartedRef = useRef(false);
     const [currentSpeaker,setCurrentSpeaker]=useState(null); // 'agent', 'user', or null
+    const [conversation,setConversation]=useState([]);
+    const {interview_id}=useParams();
+    const router=useRouter();
+    const [loading,setLoading]=useState(false);
+
+    const GenerateFeedback=async ()=>{
+      setLoading(true);
+      try {
+        const result=await axios.post('/api/ai-feedback',{
+            conversation:conversation
+        })
+        console.log(result.data);
+        const Content =  result.data.content
+        const FINAL_CONTENT = Content.replace('```json', '').replace('```', '');
+        console.log(FINAL_CONTENT);
+        //Save to Database
+        const { data, error } = await supabase
+          .from('interview-feedback')
+          .insert([
+              { userName: interviewInfo?.userName, 
+                userEmail: interviewInfo?.userEmail,
+                interview_id:interview_id,
+                feedback:JSON.parse(FINAL_CONTENT),
+                recommended:false
+              },
+          ])
+          .select()
+        console.log(data);  
+        router.replace('/interview/' + interview_id + '/completed');
+      } catch (error) {
+        console.error('Error generating feedback:', error);
+        toast.error('Failed to generate feedback');
+      } finally {
+        setLoading(false);
+      }
+    }
 
     const startCall=async ()=>{
        if (callStartedRef.current) return;
+
        if (!vapiRef.current) {
          vapiRef.current = new Vapi(process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY);
          vapiRef.current.on('error', (err) => {
@@ -45,8 +84,20 @@ function StartInterview() {
            console.log('Call has stopped');
            toast('Interview Ended');
            setCurrentSpeaker(null);
+           GenerateFeedback();
          });
+
+         vapiRef.current.on("message", (message) => {
+          console.log("message:",message);
+          if(message?.conversation){
+            const convoString=JSON.stringify(message.conversation);
+            console.log("Conversation string:", convoString);
+            setConversation(message.conversation);
+          }
+         });
+
        }
+
        let questionList = '';
        if (Array.isArray(interviewInfo?.interviewData?.questionList)) {
          interviewInfo.interviewData.questionList.forEach ((item,index)=>(
@@ -102,12 +153,17 @@ Key Guidelines:
 
   }
 
-  const stopInterview=()=>{
+  const stopInterview=async ()=>{
     if (!callStartedRef.current) return;
+    setLoading(true);
     try {
       vapiRef.current?.stop();
-    } finally {
       callStartedRef.current = false;
+      // Generate feedback after stopping
+      await GenerateFeedback();
+    } catch (error) {
+      console.error('Error stopping interview:', error);
+      setLoading(false);
     }
   }
 
@@ -150,12 +206,14 @@ Key Guidelines:
 
         <div className='flex items-center justify-center gap-5 mt-3 '>
           <Mic onClick={startCall} className="w-13 h-13 bg-gray-500 text-white rounded-full p-3 cursor-pointer"/>
-         <AlertConformation stopInterview={()=>stopInterview()}>
-             <Phone className="w-13 h-13 bg-red-500 text-white rounded-full p-3 cursor-pointer"/>
-         </AlertConformation>
+         {/*<AlertConformation stopInterview={()=>stopInterview()}>*/}
+         {!loading ? <Phone className="w-13 h-13 bg-red-500 text-white rounded-full p-3 cursor-pointer"
+              onClick={()=> stopInterview()}
+          /> : <Loader2Icon className="animate-spin" />}
+         {/*</AlertConformation>*/}
         </div>
 
-       <h2 className='text-sm text-gray-500 text-center mt-1'>Interview in Progress...</h2>
+        <h2 className='text-sm text-gray-500 text-center mt-1'>Interview in Progress...</h2>
 
     </div>
    
