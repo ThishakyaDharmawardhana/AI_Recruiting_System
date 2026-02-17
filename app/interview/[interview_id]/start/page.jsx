@@ -26,34 +26,75 @@ function StartInterview() {
     const {interview_id}=useParams();
     const router=useRouter();
     const [loading,setLoading]=useState(false);
+    const feedbackGeneratedRef = useRef(false);
+
+    useEffect(() => {
+      const originalConsoleError = console.error;
+      console.error = (...args) => {
+        // Filter empty objects {} and objects with no meaningful content
+        if (args.length === 1 && args[0] !== null && typeof args[0] === 'object' && !Array.isArray(args[0])) {
+          const keys = Object.keys(args[0]);
+          if (keys.length === 0) return;
+          // Check if it has any meaningful properties
+          const hasContent = keys.some(key => args[0][key] !== undefined && args[0][key] !== null);
+          if (!hasContent) return;
+        }
+        const message = String(args.join(' '));
+        if (message.includes('Meeting ended due to ejection') || 
+            message.includes('Meeting has ended') ||
+            message === '[object Object]') {
+          return;
+        }
+        originalConsoleError(...args);
+      };
+      return () => {
+        console.error = originalConsoleError;
+      };
+    }, []);
 
     const GenerateFeedback=async ()=>{
+      if (feedbackGeneratedRef.current) return;
+      feedbackGeneratedRef.current = true;
       setLoading(true);
       try {
         const result=await axios.post('/api/ai-feedback',{
             conversation:conversation
         })
         console.log(result.data);
-        const Content =  result.data.content
-        const FINAL_CONTENT = Content.replace('```json', '').replace('```', '');
+        const Content =  result.data?.content || '';
+        const FINAL_CONTENT = String(Content)
+          .replace(/```json|```/g, '')
+          .trim();
         console.log(FINAL_CONTENT);
         //Save to Database
+        let parsedFeedback;
+        try {
+          const jsonMatch = FINAL_CONTENT.match(/\{[\s\S]*\}/);
+          const jsonString = jsonMatch ? jsonMatch[0] : FINAL_CONTENT;
+          parsedFeedback = JSON.parse(jsonString);
+        } catch (parseError) {
+          throw new Error('Invalid feedback JSON');
+        }
         const { data, error } = await supabase
           .from('interview-feedback')
           .insert([
               { userName: interviewInfo?.userName, 
                 userEmail: interviewInfo?.userEmail,
                 interview_id:interview_id,
-                feedback:JSON.parse(FINAL_CONTENT),
+                feedback:parsedFeedback,
                 recommended:false
               },
           ])
           .select()
+        if (error) {
+          throw error;
+        }
         console.log(data);  
         router.replace('/interview/' + interview_id + '/completed');
       } catch (error) {
         console.error('Error generating feedback:', error);
         toast.error('Failed to generate feedback');
+        feedbackGeneratedRef.current = false;
       } finally {
         setLoading(false);
       }
@@ -65,7 +106,28 @@ function StartInterview() {
        if (!vapiRef.current) {
          vapiRef.current = new Vapi(process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY);
          vapiRef.current.on('error', (err) => {
-           if (String(err?.message || err).includes('Meeting has ended')) return;
+           // Filter empty objects or objects with no meaningful content
+           if (!err) return;
+           if (typeof err === 'object' && !Array.isArray(err)) {
+             const keys = Object.keys(err);
+             if (keys.length === 0) return;
+             const hasContent = keys.some(key => {
+               const val = err[key];
+               return val !== undefined && val !== null && val !== '';
+             });
+             if (!hasContent) return;
+           }
+           
+           const errText = [
+             err?.message,
+             err?.error,
+             err?.data?.message,
+           ].filter(Boolean).join(' ') || String(err);
+           
+           if (errText.includes('Meeting has ended') || 
+               errText.includes('ejection') || 
+               errText === '[object Object]') return;
+           
            console.error(err);
          });
          vapiRef.current.on('speech-start', () => {
@@ -159,8 +221,6 @@ Key Guidelines:
     try {
       vapiRef.current?.stop();
       callStartedRef.current = false;
-      // Generate feedback after stopping
-      await GenerateFeedback();
     } catch (error) {
       console.error('Error stopping interview:', error);
       setLoading(false);
