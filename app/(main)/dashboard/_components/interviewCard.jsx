@@ -3,7 +3,7 @@ import moment from 'moment'
 import { Button } from "@/components/ui/button";
 import { Copy, Send, ArrowRight } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-
+import Link from 'next/link';
 
 function InterviewCard({interview, viewDetail=false}) {
   const url = process.env.NEXT_PUBLIC_HOST_URL+ "/"+ interview?.interview_id;
@@ -34,7 +34,9 @@ function InterviewCard({interview, viewDetail=false}) {
         <Button className='flex-1 cursor-pointer' onClick={onSend}><Send className='w-4 h-4 '/>Send</Button>
       </div>
       :
-      <Button className="mt-3 w-full" variant='outline' >View Detail <ArrowRight className="w-4 h-4 ml-2"/></Button>
+      <Link href={'/scheduled-interview/'+interview?.interview_id+ '/details'}>
+      <Button className="mt-3 w-full cursor-pointer" variant='outline' >View Detail <ArrowRight className="w-4 h-4 ml-2"/></Button>
+      </Link>
       }
      
     </div>
