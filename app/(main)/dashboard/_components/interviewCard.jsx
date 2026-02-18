@@ -26,16 +26,16 @@ function InterviewCard({interview, viewDetail=false}) {
 
       <h2 className='mt-3 font-bold text-lg'>{interview?.jobPosition}</h2>
       <h2 className='mt-2 text-sm text-gray-500 flex justify-between text-gray-500'>{interview?.duration}
-        <span className='text-green-600'>{interview['interview-feedback']?.length} Candidates</span>
+        <span className='text-green-600'>{interview['interview-feedback']?.length ?? 0} Candidates</span>
       </h2>
 
       {!viewDetail ? <div className='flex gap-3 mt-3'>
-        <Button variant="outline" className='flex-1 cursor-pointer' onClick={copyLink}><Copy className='w-4 h-4'/>Copy Link</Button>
-        <Button className='flex-1 cursor-pointer' onClick={onSend}><Send className='w-4 h-4 '/>Send</Button>
+        <Button variant="outline" className='flex-1 cursor-pointer bg-green-500 text-white hover:bg-green-800 hover:text-white' onClick={copyLink}><Copy className='w-4 h-4'/>Copy Link</Button>
+        <Button className='flex-1 cursor-pointer text-white hover:bg-orange-700 hover:text-white ' onClick={onSend}><Send className='w-4 h-4 '/>Send</Button>
       </div>
       :
-      <Link href={'/scheduled-interview/'+interview?.interview_id+ '/details'}>
-      <Button className="mt-3 w-full cursor-pointer" variant='outline' >View Detail <ArrowRight className="w-4 h-4 ml-2"/></Button>
+      <Link href={'/scheduled-interview/'+interview?.interview_id+ '/details'} className='mt-3 flex items-center justify-center gap-2 text-primary font-bold cursor-pointer' >
+      <Button className=" gap-2 flex items-center justify-center cursor-pointer bg-green-500 text-white hover:bg-green-800 hover:text-white" variant='outline' >View Detail <ArrowRight className="w-4 h-4"/></Button>
       </Link>
       }
      

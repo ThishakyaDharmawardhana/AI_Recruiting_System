@@ -17,13 +17,13 @@ function AllInterview() {
     const GetInterviewList=async ()=>{
       let { data: Interviews, error } = await supabase
           .from('Interviews')
-          .select('*')
+          .select('jobPosition, duration, interview_id, created_at, interview-feedback(userEmail)')
           .eq('userEmail', user?.email)
           .order('id', { ascending: false })
        
 
       console.log(Interviews)
-      setInterviewList(Interviews);
+      setInterviewList(Interviews || []);
 
 
     }
