@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import axios from 'axios'
 import { toast } from 'react-hot-toast'
 import { Loader2 as Loader2Icon } from 'lucide-react'
@@ -17,15 +17,26 @@ function QuestionList({formData,onCreateLink}) {
   const{user}=useUser();
   const[saveLoading, setSaveLoading]=useState(false);
 
-  useEffect(() => {
-    if(formData)
-    {
-      GenerateQuestionList()
-    }
-  }, [formData]);
+  const saveInterview = async (interview_id) => {
+    const { error } = await supabase
+      .from('Interviews')
+      .insert({
+        jobPosition: formData?.jobPosition || '',
+        jobDescription: formData?.jobDescription || '',
+        duration: formData?.duration || '',
+        type: Array.isArray(formData?.type) ? formData.type.join(',') : (formData?.type || ''),
+        questionList: questionList || [],
+        userEmail: user.email,
+        interview_id,
+        created_at: new Date().toISOString()
+      });
 
-  const GenerateQuestionList = async() => 
-  {
+    if (error) {
+      throw error;
+    }
+  }
+
+  const GenerateQuestionList = useCallback(async () => {
     // Call the API to generate question list based on formData
     setLoading(true);
     try{
@@ -45,7 +56,18 @@ function QuestionList({formData,onCreateLink}) {
        setLoading(false);
         
     }
-  }
+  }, [formData])
+
+  useEffect(() => {
+    if(formData)
+    {
+      const timeoutId = setTimeout(() => {
+        GenerateQuestionList()
+      }, 0)
+
+      return () => clearTimeout(timeoutId)
+    }
+  }, [formData, GenerateQuestionList]);
 
   const onFinish = async () => {
       setSaveLoading(true);
@@ -56,33 +78,21 @@ function QuestionList({formData,onCreateLink}) {
           return;
         }
 
-        const interview_id = uuidv4();
-        console.log('Saving interview with user:', user.email);
-        
-        const { error } = await supabase
-          .from('Interviews')
-          .insert({
-            jobPosition: formData?.jobPosition || '',
-            jobDescription: formData?.jobDescription || '',
-            duration: formData?.duration || '',
-            type: Array.isArray(formData?.type) ? formData.type.join(',') : (formData?.type || ''),
-            questionList: JSON.stringify(questionList || []),
-            userEmail: user.email,
-            interview_id: interview_id,
-            created_at: new Date().toISOString()
-          });
-
-        if (error) {
-          console.error('Database error:', error);
-          toast.error('Failed to save: ' + error.message);
+        if (!questionList?.length) {
+          toast.error('Questions are still loading. Please wait a moment.');
           setSaveLoading(false);
           return;
         }
 
-        console.log('Interview saved successfully');
-        toast.success('Interview saved!');
-        setSaveLoading(false);
+        const interview_id = uuidv4();
+
         onCreateLink({interview_id, questionList});
+
+        saveInterview(interview_id)
+          .catch((error) => {
+            console.error('Database error:', error);
+            toast.error('Interview link created, but saving failed. Please try again.');
+          });
       } catch (err) {
         console.error('Error:', err);
         toast.error('Error: ' + (err?.message || 'Unknown error'));

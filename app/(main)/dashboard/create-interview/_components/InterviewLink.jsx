@@ -16,7 +16,10 @@ import { useRouter } from 'next/navigation'
 function InterviewLink({interview_id, formData, questionList}) {
 
     console.log('InterviewLink received interview_id:', interview_id);
-    const url=process.env.NEXT_PUBLIC_HOST_URL+'/'+interview_id;
+        const baseUrl = (process.env.NEXT_PUBLIC_HOST_URL || (typeof window !== 'undefined' ? window.location.origin : ''))
+            .replace(/\/+$/, '');
+        const interviewBaseUrl = baseUrl.endsWith('/interview') ? baseUrl : `${baseUrl}/interview`;
+        const url=`${interviewBaseUrl}/${interview_id}`;
     const questionCount = questionList?.length || 0;
     console.log('Constructed URL:', url);
 

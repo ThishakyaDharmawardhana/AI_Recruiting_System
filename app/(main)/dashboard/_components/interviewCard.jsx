@@ -6,7 +6,10 @@ import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 
 function InterviewCard({interview, viewDetail=false}) {
-  const url = process.env.NEXT_PUBLIC_HOST_URL+ "/"+ interview?.interview_id;
+  const baseUrl = (process.env.NEXT_PUBLIC_HOST_URL || (typeof window !== 'undefined' ? window.location.origin : ''))
+    .replace(/\/+$/, '');
+  const interviewBaseUrl = baseUrl.endsWith('/interview') ? baseUrl : `${baseUrl}/interview`;
+  const url = `${interviewBaseUrl}/${interview?.interview_id}`;
 
   const copyLink=()=>{
       navigator.clipboard.writeText(url);
